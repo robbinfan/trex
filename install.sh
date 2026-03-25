@@ -9,8 +9,37 @@
 #
 set -e
 
-TARGET="${1:-.}"
-PLATFORM="${2:-claude}"
+# Parse named arguments (with fallback to positional for backwards compat)
+TARGET="."
+PLATFORM="claude"
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --target)
+      TARGET="$2"
+      shift 2
+      ;;
+    --platform)
+      PLATFORM="$2"
+      shift 2
+      ;;
+    -*)
+      echo "Unknown option: $1" >&2
+      echo "Usage: ./install.sh [--target REPO_DIR] [--platform claude|codex|cursor|all]" >&2
+      exit 1
+      ;;
+    *)
+      # Positional fallback: first positional = target, second = platform
+      if [[ "$TARGET" == "." ]]; then
+        TARGET="$1"
+      elif [[ "$PLATFORM" == "claude" ]]; then
+        PLATFORM="$1"
+      fi
+      shift
+      ;;
+  esac
+done
+
 TREX_DIR="$TARGET/.claude/tools/trex"
 
 echo "Installing trex to $TREX_DIR ..."
@@ -35,9 +64,23 @@ echo "Building trigram index..."
 case "$PLATFORM" in
   claude|all)
     echo "Installing Claude Code skill..."
-    cp "$SCRIPT_DIR/skills/claude/skill.md" "$TREX_DIR/"
+    mkdir -p "$TARGET/.claude/skills"
+    cp "$SCRIPT_DIR/skills/claude/skill.md" "$TARGET/.claude/skills/trex.md"
     ;;
 esac
+
+# Append to .gitignore if entries are missing
+GITIGNORE="$TARGET/.gitignore"
+ENTRIES=(
+  ".claude/tools/trex/trex"
+  ".claude/trigram-index.bin"
+)
+for entry in "${ENTRIES[@]}"; do
+  if [ ! -f "$GITIGNORE" ] || ! grep -qxF "$entry" "$GITIGNORE"; then
+    echo "$entry" >> "$GITIGNORE"
+    echo "Added '$entry' to .gitignore"
+  fi
+done
 
 echo ""
 echo "Done! trex installed at $TREX_DIR"
