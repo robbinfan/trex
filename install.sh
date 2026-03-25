@@ -60,12 +60,37 @@ echo "Building trex..."
 echo "Building trigram index..."
 "$TREX_DIR/trex" build --dir "$TARGET"
 
-# Install skill definition
+# Install skill/tool definitions per platform
+install_claude() {
+  echo "Installing Claude Code skill..."
+  mkdir -p "$TARGET/.claude/skills"
+  cp "$SCRIPT_DIR/skills/claude/skill.md" "$TARGET/.claude/skills/trex.md"
+}
+
+install_codex() {
+  echo "Installing Codex tool definition..."
+  mkdir -p "$TARGET/.codex"
+  cp "$SCRIPT_DIR/skills/codex/tool.yaml" "$TARGET/.codex/trex-tool.yaml"
+}
+
+install_cursor() {
+  echo "Installing Cursor rules..."
+  mkdir -p "$TARGET/.cursor"
+  cp "$SCRIPT_DIR/skills/cursor/rules.md" "$TARGET/.cursor/trex-rules.md"
+}
+
 case "$PLATFORM" in
-  claude|all)
-    echo "Installing Claude Code skill..."
-    mkdir -p "$TARGET/.claude/skills"
-    cp "$SCRIPT_DIR/skills/claude/skill.md" "$TARGET/.claude/skills/trex.md"
+  claude) install_claude ;;
+  codex)  install_codex ;;
+  cursor) install_cursor ;;
+  all)
+    install_claude
+    install_codex
+    install_cursor
+    ;;
+  *)
+    echo "Unknown platform: $PLATFORM (expected claude|codex|cursor|all)" >&2
+    exit 1
     ;;
 esac
 
